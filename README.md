@@ -1,7 +1,6 @@
 
-```md
-[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=rijju-das&layout=donut)](https://github.com/rijju-das/github-readme-stats)
-```
+[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=rijju-das\&layout=donut)](https://github.com/rijju-das/github-readme-stats)
+
 <!--
 **rijju-das/rijju-das** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
