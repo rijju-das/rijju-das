@@ -1,5 +1,7 @@
 
-![](https://komarev.com/ghpvc/?username=rijju-das&style=for-the-badge&color=brightgreen)
+```md
+![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=rijju-das&size_weight=0.5&count_weight=0.5)
+```
 <!--
 **rijju-das/rijju-das** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
