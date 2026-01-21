@@ -5,7 +5,7 @@
 
 ## 🧠 About Me
 
-- 🎓 **PhD Scholar** working in **Affective Computing**
+- 🎓 **PhD Scholar** working on **Affective Computing**
 - 🤖 Interested in **Large Language Models (LLMs)** and human-centered AI
 - 🧪 Exploring how machines can **understand emotions, behavior, and context**
 - 📚 Passionate about research, building prototypes, and experimenting with models
