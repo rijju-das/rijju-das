@@ -1,5 +1,5 @@
 
-
+![](https://komarev.com/ghpvc/?username=rijju-das&style=for-the-badge&color=brightgreen)
 <!--
 **rijju-das/rijju-das** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
