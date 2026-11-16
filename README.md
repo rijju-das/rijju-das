@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1e3a8a,50:6d28d9,100:db2777&height=190&section=header&text=Riju%20Das&fontSize=64&fontColor=ffffff&animation=fadeIn&fontAlignY=36&desc=AI%20Engineer%20and%20Data%20Scientist&descAlignY=58&descSize=20" width="100%" alt="Riju Das, AI Engineer and Data Scientist" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1e3a8a,50:6d28d9,100:db2777&height=190&section=header&text=Dr%20Riju%20Das&fontSize=64&fontColor=ffffff&animation=fadeIn&fontAlignY=36&desc=AI%20Engineer%20and%20Data%20Scientist&descAlignY=58&descSize=20" width="100%" alt="Dr Riju Das, AI Engineer and Data Scientist" />
 
 <a href="https://rijju-das.github.io/my_profile">
   <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=500&size=22&duration=3200&pause=900&color=7C3AED&center=true&vCenter=true&width=820&lines=I+build%2C+evaluate+and+deploy+AI+systems;LLM+agents+%7C+MCP+servers+%7C+RAG+%7C+model+evaluation;From+research+model+to+tested+service+on+AWS;PhD+in+Computer+Science%2C+University+College+Dublin" alt="I build, evaluate and deploy AI systems" />
