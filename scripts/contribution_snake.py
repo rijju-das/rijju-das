@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Draw my GitHub contribution grid as an animated SVG.
+"""Draw my GitHub contribution grids, one per year, as an animated SVG.
 
-A snake crosses the grid and eats every day that has contributions. Each square
+Every year I have contributed in gets its own grid, newest first, and its own
+snake. The snake crosses the grid and eats every day that has contributions. Each square
 has a colour value from 1 (lightest) to 4 (darkest); the snake gains one body
 block each time the colour it has eaten adds up to one darkest square.
 Standard library only.
 
 Usage:
   GITHUB_TOKEN=... GITHUB_USER=rijju-das python3 scripts/contribution_snake.py dist
-  python3 scripts/contribution_snake.py dist --from-json calendar.json   (for testing)
+  python3 scripts/contribution_snake.py dist --from-json years.json   (for testing: {"2026": weeks, ...})
 
 Writes:
   dist/github-contribution-grid-snake.svg        (light theme)
@@ -28,28 +29,42 @@ START_LENGTH = 3    # blocks before the snake has eaten anything: the head and t
 LEVEL_VALUE = {1: 1, 2: 2, 3: 3, 4: 4}   # colour value of a square, from lightest to darkest
 FULL_BLOCK = 4      # colour value the snake must eat to gain one body block (one darkest square)
 STEP = 0.11         # seconds the snake takes to move one cell
-PAUSE = 2.0         # seconds the empty grid is shown before the loop restarts
+PAUSE = 2.0         # seconds the empty grids are shown before the loop restarts
+LABEL_HEIGHT = 20   # room for the year above each grid
+YEAR_GAP = 12       # space between one year's grid and the next
 
 LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 PALETTES = {
     "light": {"empty": "#ebedf0", "levels": ["#ddd6fe", "#a78bfa", "#7c3aed", "#4c1d95"],
-              "snake": "#db2777", "head": "#9d174d", "eye": "#ffffff"},
+              "snake": "#db2777", "head": "#9d174d", "eye": "#ffffff", "label": "#57606a"},
     "dark": {"empty": "#161b22", "levels": ["#3b1d6e", "#5b21b6", "#7c3aed", "#a78bfa"],
-             "snake": "#f472b6", "head": "#fbcfe8", "eye": "#161b22"},
+             "snake": "#f472b6", "head": "#fbcfe8", "eye": "#161b22", "label": "#8b949e"},
 }
-QUERY = """query($login: String!) { user(login: $login) { contributionsCollection { contributionCalendar {
-  totalContributions weeks { contributionDays { contributionLevel weekday } } } } } }"""
+YEARS_QUERY = "query($login: String!) { user(login: $login) { contributionsCollection { contributionYears } } }"
+CALENDAR_QUERY = """query($login: String!, $from: DateTime!, $to: DateTime!) { user(login: $login) {
+  contributionsCollection(from: $from, to: $to) { contributionCalendar {
+    weeks { contributionDays { contributionLevel weekday } } } } } }"""
 
 
-def fetch_weeks(login, token):
-    body = json.dumps({"query": QUERY, "variables": {"login": login}}).encode()
+def ask_github(query, variables, token):
+    body = json.dumps({"query": query, "variables": variables}).encode()
     request = urllib.request.Request("https://api.github.com/graphql", data=body, headers={
         "Authorization": "bearer " + token, "Content-Type": "application/json", "User-Agent": "contribution-snake"})
     with urllib.request.urlopen(request, timeout=30) as response:
         data = json.load(response)
     if data.get("errors"):
         raise SystemExit("GitHub API error: %s" % data["errors"])
-    return data["data"]["user"]["contributionsCollection"]["contributionCalendar"]["weeks"]
+    return data["data"]["user"]["contributionsCollection"]
+
+
+def fetch_years(login, token):
+    """Return {year: weeks} for every calendar year with contributions."""
+    years = ask_github(YEARS_QUERY, {"login": login}, token)["contributionYears"]
+    calendars = {}
+    for year in years:
+        variables = {"login": login, "from": "%d-01-01T00:00:00Z" % year, "to": "%d-12-31T23:59:59Z" % year}
+        calendars[str(year)] = ask_github(CALENDAR_QUERY, variables, token)["contributionCalendar"]["weeks"]
+    return calendars
 
 
 def grid_from_weeks(weeks):
@@ -122,21 +137,21 @@ def fraction(value):
     return ("%.5f" % value).rstrip("0").rstrip(".") or "0"
 
 
-def render(grid, columns, palette):
+def plan_year(grid, columns):
     route, eaten_at = plan_route(grid, columns)
-    steps = len(route) - 1
     grow_at = growth_steps(grid, eaten_at)
-    final_length = START_LENGTH + len(grow_at)
-    move_time = steps * STEP
-    duration = move_time + final_length * STEP + PAUSE
-    dur = "%.2fs" % duration
-    width = 2 * MARGIN + columns * PITCH - (PITCH - CELL)
-    height = 2 * MARGIN + 7 * PITCH - (PITCH - CELL)
+    steps = len(route) - 1
+    return {"grid": grid, "route": route, "eaten_at": eaten_at, "grow_at": grow_at, "steps": steps,
+            "final_length": START_LENGTH + len(grow_at),
+            "busy_time": steps * STEP + (START_LENGTH + len(grow_at)) * STEP}
 
-    out = ['<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
-           'viewBox="0 0 %d %d" width="%d" height="%d" role="img">' % (width, height, width, height),
-           "<title>A snake eats my GitHub contributions and grows as it eats</title>",
-           '<defs><path id="track" d="%s"/></defs>' % track_path(route)]
+
+def draw_year(plan, palette, duration, track_id):
+    """SVG for one year's grid and its snake, timed against the shared loop duration."""
+    dur = "%.2fs" % duration
+    grid, eaten_at, grow_at = plan["grid"], plan["eaten_at"], plan["grow_at"]
+    move_time = plan["steps"] * STEP
+    out = []
 
     # the contribution grid: each day with contributions empties when the head reaches it
     for (x, y), level in sorted(grid.items()):
@@ -150,10 +165,10 @@ def render(grid, columns, palette):
         else:
             out.append(base + "/>")
 
-    # the snake: every segment follows the same track, each one a step behind the one in front;
+    # the snake: every block follows the same track, each one a step behind the one in front;
     # a new tail block becomes visible each time the colour eaten completes another block
     half = SEGMENT / 2
-    for index in range(final_length - 1, -1, -1):          # tail first, so the head is drawn on top
+    for index in range(plan["final_length"] - 1, -1, -1):  # tail first, so the head is drawn on top
         start = index * STEP / duration
         end = (index * STEP + move_time) / duration
         if index == 0:
@@ -161,7 +176,7 @@ def render(grid, columns, palette):
         else:
             timing = 'keyTimes="0;%s;%s;1" keyPoints="0;0;1;1"' % (fraction(start), fraction(end))
         motion = ('<animateMotion dur="%s" repeatCount="indefinite" calcMode="linear" %s%s>'
-                  '<mpath xlink:href="#track"/></animateMotion>' % (dur, timing, ' rotate="auto"' if index == 0 else ""))
+                  '<mpath xlink:href="#%s"/></animateMotion>' % (dur, timing, ' rotate="auto"' if index == 0 else "", track_id))
         if index == 0:
             out.append('<g>%s<rect x="-8" y="-8" width="16" height="16" rx="5" fill="%s"/>'
                        '<circle cx="3.5" cy="-3.5" r="1.7" fill="%s"/><circle cx="3.5" cy="3.5" r="1.7" fill="%s"/></g>'
@@ -174,29 +189,57 @@ def render(grid, columns, palette):
             appears = fraction(grow_at[index - START_LENGTH] * STEP / duration)
             out.append('%s opacity="0">%s<animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;%s" '
                        'dur="%s" repeatCount="indefinite"/></rect>' % (shape, motion, appears, dur))
+    return out
+
+
+def render(calendars, palette):
+    """calendars: {year label: weeks}. One grid and one snake per year, newest first, all looping together."""
+    labels = sorted(calendars, reverse=True)
+    columns = max(len(calendars[label]) for label in labels)
+    plans = {label: plan_year(grid_from_weeks(calendars[label]), columns) for label in labels}
+    duration = max(plan["busy_time"] for plan in plans.values()) + PAUSE
+    grid_height = 7 * PITCH - (PITCH - CELL)
+    band = LABEL_HEIGHT + grid_height + YEAR_GAP
+    width = 2 * MARGIN + columns * PITCH - (PITCH - CELL)
+    height = MARGIN + len(labels) * band - YEAR_GAP + MARGIN
+
+    out = ['<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+           'viewBox="0 0 %d %d" width="%d" height="%d" role="img">' % (width, height, width, height),
+           "<title>Snakes eat my GitHub contributions, one year per grid, and grow as they eat</title>",
+           "<defs>%s</defs>" % "".join('<path id="track%d" d="%s"/>' % (i, track_path(plans[label]["route"]))
+                                       for i, label in enumerate(labels))]
+    for i, label in enumerate(labels):
+        top = MARGIN + i * band
+        out.append('<text x="%d" y="%d" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" '
+                   'font-size="12" font-weight="600" fill="%s">%s</text>' % (MARGIN, top + 12, palette["label"], label))
+        # the grid and its snake are drawn in their own coordinates, then moved under the label
+        out.append('<g transform="translate(0 %d)">' % (top + LABEL_HEIGHT - MARGIN))
+        out.extend(draw_year(plans[label], palette, duration, "track%d" % i))
+        out.append("</g>")
     out.append("</svg>")
-    return "\n".join(out), {"steps": steps, "days_eaten": len(eaten_at), "colour_eaten": sum(LEVEL_VALUE[grid[c]] for c in eaten_at),
-                                 "blocks_gained": len(grow_at), "final_length": final_length, "seconds": round(duration, 1)}
+    info = {label: {"days_eaten": len(plans[label]["eaten_at"]), "blocks_gained": len(plans[label]["grow_at"]),
+                    "final_length": plans[label]["final_length"]} for label in labels}
+    return "\n".join(out), {"years": info, "loop_seconds": round(duration, 1), "size": "%dx%d" % (width, height)}
 
 
 def main():
     args = sys.argv[1:]
     out_dir = Path(args[0] if args and not args[0].startswith("--") else "dist")
     if "--from-json" in args:
-        weeks = json.loads(Path(args[args.index("--from-json") + 1]).read_text())
+        calendars = json.loads(Path(args[args.index("--from-json") + 1]).read_text())
     else:
         token = os.environ.get("GITHUB_TOKEN")
         login = os.environ.get("GITHUB_USER")
         if not token or not login:
             raise SystemExit("Set GITHUB_TOKEN and GITHUB_USER, or pass --from-json FILE")
-        weeks = fetch_weeks(login, token)
-    grid = grid_from_weeks(weeks)
-    columns = len(weeks)
+        calendars = fetch_years(login, token)
+    if not calendars:
+        raise SystemExit("No contribution years found")
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, theme in (("github-contribution-grid-snake.svg", "light"), ("github-contribution-grid-snake-dark.svg", "dark")):
-        svg, info = render(grid, columns, PALETTES[theme])
+        svg, info = render(calendars, PALETTES[theme])
         (out_dir / name).write_text(svg, encoding="utf-8")
-        print("%-45s %6d bytes  %s" % (name, len(svg), info))
+        print("%-45s %6d bytes  %s" % (name, len(svg), json.dumps(info)))
 
 
 if __name__ == "__main__":
