@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Draw my GitHub contribution grid as an animated SVG.
 
-A snake crosses the grid, eats every day that has contributions and grows by
-one segment for each day it eats. Standard library only.
+A snake crosses the grid and eats every day that has contributions. Each square
+has a colour value from 1 (lightest) to 4 (darkest); the snake gains one body
+block each time the colour it has eaten adds up to one darkest square.
+Standard library only.
 
 Usage:
   GITHUB_TOKEN=... GITHUB_USER=rijju-das python3 scripts/contribution_snake.py dist
@@ -23,6 +25,8 @@ CELL = 12           # cell size
 MARGIN = 8
 SEGMENT = 14        # snake body segment size
 START_LENGTH = 3    # blocks before the snake has eaten anything: the head and two body blocks
+LEVEL_VALUE = {1: 1, 2: 2, 3: 3, 4: 4}   # colour value of a square, from lightest to darkest
+FULL_BLOCK = 4      # colour value the snake must eat to gain one body block (one darkest square)
 STEP = 0.11         # seconds the snake takes to move one cell
 PAUSE = 2.0         # seconds the empty grid is shown before the loop restarts
 
@@ -83,6 +87,18 @@ def plan_route(grid, columns):
     return route, eaten_at
 
 
+def growth_steps(grid, eaten_at):
+    """Steps at which the snake gains a body block. Each square eaten adds its colour
+    value to a running total; a block is added each time the total reaches another
+    FULL_BLOCK. Any colour left over carries on towards the next block."""
+    steps, total = [], 0
+    for cell, step in sorted(eaten_at.items(), key=lambda item: item[1]):
+        total += LEVEL_VALUE[grid[cell]]
+        while total >= FULL_BLOCK * (len(steps) + 1):
+            steps.append(step)
+    return steps
+
+
 def centre(cell):
     return (MARGIN + cell[0] * PITCH + CELL / 2, MARGIN + cell[1] * PITCH + CELL / 2)
 
@@ -109,17 +125,17 @@ def fraction(value):
 def render(grid, columns, palette):
     route, eaten_at = plan_route(grid, columns)
     steps = len(route) - 1
-    final_length = START_LENGTH + len(eaten_at)
+    grow_at = growth_steps(grid, eaten_at)
+    final_length = START_LENGTH + len(grow_at)
     move_time = steps * STEP
     duration = move_time + final_length * STEP + PAUSE
     dur = "%.2fs" % duration
     width = 2 * MARGIN + columns * PITCH - (PITCH - CELL)
     height = 2 * MARGIN + 7 * PITCH - (PITCH - CELL)
-    eat_order = sorted(eaten_at.values())
 
     out = ['<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
            'viewBox="0 0 %d %d" width="%d" height="%d" role="img">' % (width, height, width, height),
-           "<title>A snake eats my GitHub contributions and grows with each day it eats</title>",
+           "<title>A snake eats my GitHub contributions and grows as it eats</title>",
            '<defs><path id="track" d="%s"/></defs>' % track_path(route)]
 
     # the contribution grid: each day with contributions empties when the head reaches it
@@ -135,7 +151,7 @@ def render(grid, columns, palette):
             out.append(base + "/>")
 
     # the snake: every segment follows the same track, each one a step behind the one in front;
-    # a new tail segment becomes visible each time a day is eaten
+    # a new tail block becomes visible each time the colour eaten completes another block
     half = SEGMENT / 2
     for index in range(final_length - 1, -1, -1):          # tail first, so the head is drawn on top
         start = index * STEP / duration
@@ -155,11 +171,12 @@ def render(grid, columns, palette):
         if index < START_LENGTH:
             out.append("%s>%s</rect>" % (shape, motion))
         else:
-            appears = fraction(eat_order[index - START_LENGTH] * STEP / duration)
+            appears = fraction(grow_at[index - START_LENGTH] * STEP / duration)
             out.append('%s opacity="0">%s<animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;%s" '
                        'dur="%s" repeatCount="indefinite"/></rect>' % (shape, motion, appears, dur))
     out.append("</svg>")
-    return "\n".join(out), {"steps": steps, "days_eaten": len(eaten_at), "final_length": final_length, "seconds": round(duration, 1)}
+    return "\n".join(out), {"steps": steps, "days_eaten": len(eaten_at), "colour_eaten": sum(LEVEL_VALUE[grid[c]] for c in eaten_at),
+                                 "blocks_gained": len(grow_at), "final_length": final_length, "seconds": round(duration, 1)}
 
 
 def main():

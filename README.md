@@ -130,7 +130,7 @@ class RijuDas:
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/github-contribution-grid-snake-dark.svg" />
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/github-contribution-grid-snake.svg" />
-    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/github-contribution-grid-snake.svg" alt="A snake eats my GitHub contributions and grows with each day it eats" />
+    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/github-contribution-grid-snake.svg" alt="A snake eats my GitHub contributions and grows as it eats" />
   </picture>
 </div>
 
