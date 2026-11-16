@@ -22,7 +22,7 @@ PITCH = 16          # distance between cell centres, in pixels
 CELL = 12           # cell size
 MARGIN = 8
 SEGMENT = 14        # snake body segment size
-START_LENGTH = 4    # segments before the snake has eaten anything
+START_LENGTH = 3    # blocks before the snake has eaten anything: the head and two body blocks
 STEP = 0.11         # seconds the snake takes to move one cell
 PAUSE = 2.0         # seconds the empty grid is shown before the loop restarts
 
