@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Draw my GitHub contribution grids, one per year, as an animated SVG.
+"""Draw my GitHub contributions as an animated SVG, laid out like the contribution
+panel on a GitHub profile: one grid, with the list of years beside it.
 
-Every year I have contributed in gets its own grid, newest first, and its own
-snake. The snake crosses the grid and eats every day that has contributions. Each square
+The years are shown one after another, newest first. For each year a snake
+crosses the grid and eats every day that has contributions. Each square
 has a colour value from 1 (lightest) to 4 (darkest); the snake gains one body
 block each time the colour it has eaten adds up to one darkest square.
 Standard library only.
@@ -29,21 +30,26 @@ START_LENGTH = 3    # blocks before the snake has eaten anything: the head and t
 LEVEL_VALUE = {1: 1, 2: 2, 3: 3, 4: 4}   # colour value of a square, from lightest to darkest
 FULL_BLOCK = 4      # colour value the snake must eat to gain one body block (one darkest square)
 STEP = 0.11         # seconds the snake takes to move one cell
-PAUSE = 2.0         # seconds the empty grids are shown before the loop restarts
-LABEL_HEIGHT = 20   # room for the year above each grid
-YEAR_GAP = 12       # space between one year's grid and the next
+PAUSE = 1.2         # seconds the empty grid is shown before the next year appears
+LABEL_HEIGHT = 24   # room for the "N contributions in YEAR" line above the grid
+YEAR_WIDTH = 56     # width of a year button in the list on the right
+YEAR_HEIGHT = 24
+YEAR_SPACING = 4
+FONT = "-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif"
 
 LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 PALETTES = {
     "light": {"empty": "#ebedf0", "levels": ["#ddd6fe", "#a78bfa", "#7c3aed", "#4c1d95"],
-              "snake": "#db2777", "head": "#9d174d", "eye": "#ffffff", "label": "#57606a"},
+              "snake": "#db2777", "head": "#9d174d", "eye": "#ffffff", "label": "#57606a",
+              "active": "#7c3aed", "active_text": "#ffffff"},
     "dark": {"empty": "#161b22", "levels": ["#3b1d6e", "#5b21b6", "#7c3aed", "#a78bfa"],
-             "snake": "#f472b6", "head": "#fbcfe8", "eye": "#161b22", "label": "#8b949e"},
+             "snake": "#f472b6", "head": "#fbcfe8", "eye": "#161b22", "label": "#8b949e",
+             "active": "#6d28d9", "active_text": "#ffffff"},
 }
 YEARS_QUERY = "query($login: String!) { user(login: $login) { contributionsCollection { contributionYears } } }"
 CALENDAR_QUERY = """query($login: String!, $from: DateTime!, $to: DateTime!) { user(login: $login) {
   contributionsCollection(from: $from, to: $to) { contributionCalendar {
-    weeks { contributionDays { contributionLevel weekday } } } } } }"""
+    totalContributions weeks { contributionDays { contributionLevel weekday } } } } } }"""
 
 
 def ask_github(query, variables, token):
@@ -58,12 +64,13 @@ def ask_github(query, variables, token):
 
 
 def fetch_years(login, token):
-    """Return {year: weeks} for every calendar year with contributions."""
+    """Return {year: {"total": contributions, "weeks": weeks}} for every calendar year with contributions."""
     years = ask_github(YEARS_QUERY, {"login": login}, token)["contributionYears"]
     calendars = {}
     for year in years:
         variables = {"login": login, "from": "%d-01-01T00:00:00Z" % year, "to": "%d-12-31T23:59:59Z" % year}
-        calendars[str(year)] = ask_github(CALENDAR_QUERY, variables, token)["contributionCalendar"]["weeks"]
+        calendar = ask_github(CALENDAR_QUERY, variables, token)["contributionCalendar"]
+        calendars[str(year)] = {"total": calendar["totalContributions"], "weeks": calendar["weeks"]}
     return calendars
 
 
@@ -146,8 +153,28 @@ def plan_year(grid, columns):
             "busy_time": steps * STEP + (START_LENGTH + len(grow_at)) * STEP}
 
 
-def draw_year(plan, palette, duration, track_id):
-    """SVG for one year's grid and its snake, timed against the shared loop duration."""
+def shown_between(on, off, start, end):
+    """values and keyTimes for a discrete animation that is `on` from start to end (fractions of the loop)."""
+    if start <= 0 and end >= 1:
+        return None
+    if start <= 0:
+        return "%s;%s" % (on, off), "0;%s" % fraction(end)
+    if end >= 1:
+        return "%s;%s" % (off, on), "0;%s" % fraction(start)
+    return "%s;%s;%s" % (off, on, off), "0;%s;%s" % (fraction(start), fraction(end))
+
+
+def switch(attribute, on, off, start, end, dur):
+    """An <animate> element that sets `attribute` to `on` between start and end, and `off` otherwise."""
+    timing = shown_between(on, off, start, end)
+    if timing is None:
+        return ""
+    return ('<animate attributeName="%s" calcMode="discrete" values="%s" keyTimes="%s" dur="%s" repeatCount="indefinite"/>'
+            % (attribute, timing[0], timing[1], dur))
+
+
+def draw_year(plan, palette, duration, track_id, offset):
+    """SVG for one year's grid and its snake. `offset` is when this year's turn starts, in seconds."""
     dur = "%.2fs" % duration
     grid, eaten_at, grow_at = plan["grid"], plan["eaten_at"], plan["grow_at"]
     move_time = plan["steps"] * STEP
@@ -159,7 +186,7 @@ def draw_year(plan, palette, duration, track_id):
         base = '<rect x="%d" y="%d" width="%d" height="%d" rx="2.5" fill="%s"' % (
             px, py, CELL, CELL, palette["levels"][level - 1] if level else palette["empty"])
         if (x, y) in eaten_at:
-            when = fraction(eaten_at[(x, y)] * STEP / duration)
+            when = fraction((offset + eaten_at[(x, y)] * STEP) / duration)
             out.append(base + '><animate attributeName="fill" calcMode="discrete" values="%s;%s" keyTimes="0;%s" '
                        'dur="%s" repeatCount="indefinite"/></rect>' % (palette["levels"][level - 1], palette["empty"], when, dur))
         else:
@@ -169,9 +196,9 @@ def draw_year(plan, palette, duration, track_id):
     # a new tail block becomes visible each time the colour eaten completes another block
     half = SEGMENT / 2
     for index in range(plan["final_length"] - 1, -1, -1):  # tail first, so the head is drawn on top
-        start = index * STEP / duration
-        end = (index * STEP + move_time) / duration
-        if index == 0:
+        start = (offset + index * STEP) / duration
+        end = (offset + index * STEP + move_time) / duration
+        if start <= 0:
             timing = 'keyTimes="0;%s;1" keyPoints="0;1;1"' % fraction(end)
         else:
             timing = 'keyTimes="0;%s;%s;1" keyPoints="0;0;1;1"' % (fraction(start), fraction(end))
@@ -186,39 +213,73 @@ def draw_year(plan, palette, duration, track_id):
         if index < START_LENGTH:
             out.append("%s>%s</rect>" % (shape, motion))
         else:
-            appears = fraction(grow_at[index - START_LENGTH] * STEP / duration)
+            appears = fraction((offset + grow_at[index - START_LENGTH] * STEP) / duration)
             out.append('%s opacity="0">%s<animate attributeName="opacity" calcMode="discrete" values="0;1" keyTimes="0;%s" '
                        'dur="%s" repeatCount="indefinite"/></rect>' % (shape, motion, appears, dur))
     return out
 
 
+def normalise(calendars):
+    """Accept {year: weeks} or {year: {"total": n, "weeks": weeks}}."""
+    return {str(year): (value if isinstance(value, dict) else {"total": None, "weeks": value})
+            for year, value in calendars.items()}
+
+
 def render(calendars, palette):
-    """calendars: {year label: weeks}. One grid and one snake per year, newest first, all looping together."""
+    """One grid with the list of years on the right, like the contribution panel on a GitHub profile.
+    The years take turns, newest first: each is shown while its snake eats it, then the next appears."""
+    calendars = normalise(calendars)
     labels = sorted(calendars, reverse=True)
-    columns = max(len(calendars[label]) for label in labels)
-    plans = {label: plan_year(grid_from_weeks(calendars[label]), columns) for label in labels}
-    duration = max(plan["busy_time"] for plan in plans.values()) + PAUSE
-    grid_height = 7 * PITCH - (PITCH - CELL)
-    band = LABEL_HEIGHT + grid_height + YEAR_GAP
-    width = 2 * MARGIN + columns * PITCH - (PITCH - CELL)
-    height = MARGIN + len(labels) * band - YEAR_GAP + MARGIN
+    columns = max(len(calendars[label]["weeks"]) for label in labels)
+    plans = {label: plan_year(grid_from_weeks(calendars[label]["weeks"]), columns) for label in labels}
+    turns, clock = {}, 0.0
+    for label in labels:                                   # each year's turn: (start, end) in seconds
+        turns[label] = (clock, clock + plans[label]["busy_time"] + PAUSE)
+        clock = turns[label][1]
+    duration = clock
+    dur = "%.2fs" % duration
+
+    grid_width = 2 * MARGIN + columns * PITCH - (PITCH - CELL)
+    grid_height = 2 * MARGIN + 7 * PITCH - (PITCH - CELL)
+    panel_height = LABEL_HEIGHT + grid_height
+    list_height = MARGIN + len(labels) * (YEAR_HEIGHT + YEAR_SPACING)
+    width = grid_width + YEAR_WIDTH + 2 * MARGIN
+    height = max(panel_height, list_height)
 
     out = ['<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
            'viewBox="0 0 %d %d" width="%d" height="%d" role="img">' % (width, height, width, height),
-           "<title>Snakes eat my GitHub contributions, one year per grid, and grow as they eat</title>",
-           "<defs>%s</defs>" % "".join('<path id="track%d" d="%s"/>' % (i, track_path(plans[label]["route"]))
-                                       for i, label in enumerate(labels))]
+           "<title>My GitHub contributions, year by year: a snake eats each year's grid and grows as it eats</title>",
+           '<defs><clipPath id="grid-area"><rect x="0" y="0" width="%d" height="%d"/></clipPath>%s</defs>' % (
+               grid_width, panel_height,
+               "".join('<path id="track%d" d="%s"/>' % (i, track_path(plans[label]["route"])) for i, label in enumerate(labels)))]
+
+    # the grid area: every year is drawn in the same place and only shown during its turn
     for i, label in enumerate(labels):
-        top = MARGIN + i * band
-        out.append('<text x="%d" y="%d" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" '
-                   'font-size="12" font-weight="600" fill="%s">%s</text>' % (MARGIN, top + 12, palette["label"], label))
-        # the grid and its snake are drawn in their own coordinates, then moved under the label
-        out.append('<g transform="translate(0 %d)">' % (top + LABEL_HEIGHT - MARGIN))
-        out.extend(draw_year(plans[label], palette, duration, "track%d" % i))
-        out.append("</g>")
+        start, end = turns[label][0] / duration, turns[label][1] / duration
+        visible = switch("opacity", "1", "0", start, end, dur)
+        total = calendars[label]["total"]
+        heading = ("%s contribution%s in %s" % (total, "" if total == 1 else "s", label)) if total is not None else label
+        out.append('<g clip-path="url(#grid-area)"%s>%s' % (' opacity="0"' if (visible and start > 0) else "", visible))
+        out.append('<text x="%d" y="16" font-family="%s" font-size="13" fill="%s">%s</text>' % (MARGIN, FONT, palette["label"], heading))
+        out.append('<g transform="translate(0 %d)">' % LABEL_HEIGHT)
+        out.extend(draw_year(plans[label], palette, duration, "track%d" % i, turns[label][0]))
+        out.append("</g></g>")
+
+    # the list of years on the right: the year being shown is highlighted
+    for i, label in enumerate(labels):
+        start, end = turns[label][0] / duration, turns[label][1] / duration
+        x, y = grid_width + MARGIN, MARGIN + i * (YEAR_HEIGHT + YEAR_SPACING)
+        first = start <= 0
+        out.append('<rect x="%d" y="%d" width="%d" height="%d" rx="6" fill="%s" opacity="%s">%s</rect>' % (
+            x, y, YEAR_WIDTH, YEAR_HEIGHT, palette["active"], "1" if first or len(labels) == 1 else "0",
+            switch("opacity", "1", "0", start, end, dur)))
+        out.append('<text x="%g" y="%g" text-anchor="middle" font-family="%s" font-size="12" fill="%s">%s%s</text>' % (
+            x + YEAR_WIDTH / 2, y + 16, FONT, palette["active_text"] if first or len(labels) == 1 else palette["label"], label,
+            switch("fill", palette["active_text"], palette["label"], start, end, dur)))
     out.append("</svg>")
     info = {label: {"days_eaten": len(plans[label]["eaten_at"]), "blocks_gained": len(plans[label]["grow_at"]),
-                    "final_length": plans[label]["final_length"]} for label in labels}
+                    "final_length": plans[label]["final_length"], "turn_seconds": [round(t, 1) for t in turns[label]]}
+            for label in labels}
     return "\n".join(out), {"years": info, "loop_seconds": round(duration, 1), "size": "%dx%d" % (width, height)}
 
 
