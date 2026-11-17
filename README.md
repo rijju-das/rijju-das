@@ -126,13 +126,91 @@ class RijuDas:
 
 ## 🐍 My contributions
 
+Click a year to open it.
+
+<details open>
+<summary><b>2026</b></summary>
+<br/>
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/github-contribution-grid-snake-dark.svg" />
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/github-contribution-grid-snake.svg" />
-    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/github-contribution-grid-snake.svg" alt="A snake eats my GitHub contributions and grows as it eats" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2026-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2026.svg" />
+    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2026.svg" alt="A snake eats my 2026 GitHub contributions and grows as it eats" />
   </picture>
 </div>
+</details>
+
+<details>
+<summary><b>2025</b></summary>
+<br/>
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2025-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2025.svg" />
+    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2025.svg" alt="A snake eats my 2025 GitHub contributions and grows as it eats" />
+  </picture>
+</div>
+</details>
+
+<details>
+<summary><b>2024</b></summary>
+<br/>
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2024-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2024.svg" />
+    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2024.svg" alt="A snake eats my 2024 GitHub contributions and grows as it eats" />
+  </picture>
+</div>
+</details>
+
+<details>
+<summary><b>2023</b></summary>
+<br/>
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2023-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2023.svg" />
+    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2023.svg" alt="A snake eats my 2023 GitHub contributions and grows as it eats" />
+  </picture>
+</div>
+</details>
+
+<details>
+<summary><b>2022</b></summary>
+<br/>
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2022-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2022.svg" />
+    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2022.svg" alt="A snake eats my 2022 GitHub contributions and grows as it eats" />
+  </picture>
+</div>
+</details>
+
+<details>
+<summary><b>2021</b></summary>
+<br/>
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2021-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2021.svg" />
+    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2021.svg" alt="A snake eats my 2021 GitHub contributions and grows as it eats" />
+  </picture>
+</div>
+</details>
+
+<details>
+<summary><b>2020</b></summary>
+<br/>
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2020-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2020.svg" />
+    <img src="https://raw.githubusercontent.com/rijju-das/rijju-das/output/contributions-2020.svg" alt="A snake eats my 2020 GitHub contributions and grows as it eats" />
+  </picture>
+</div>
+</details>
 
 ## 📫 Get in touch
 
